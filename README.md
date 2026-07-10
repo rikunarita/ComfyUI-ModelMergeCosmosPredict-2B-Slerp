@@ -19,7 +19,7 @@ Unlike standard linear merging, Slerp preserves the magnitude of the weight vect
 2. Click on **"Install via Git URL"**.
 3. Paste the following URL and click Install:
    ```
-   https://github.com/[Your-GitHub-Username]/ComfyUI-ModelMergeCosmosPredict-2B-Slerp.git
+   https://github.com/rikunarita/ComfyUI-ModelMergeCosmosPredict-2B-Slerp.git
    ```
 4. Restart ComfyUI.
 
@@ -27,7 +27,7 @@ Unlike standard linear merging, Slerp preserves the magnitude of the weight vect
 1. Navigate to your `ComfyUI/custom_nodes/` directory.
 2. Clone this repository:
    ```bash
-   git clone https://github.com/[Your-GitHub-Username]/ComfyUI-ModelMergeCosmosPredict-2B-Slerp.git
+   git clone https://github.com/rikunarita/ComfyUI-ModelMergeCosmosPredict-2B-Slerp.git
    ```
 3. Restart ComfyUI.
 
