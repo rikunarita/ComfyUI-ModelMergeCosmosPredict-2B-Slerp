@@ -5,10 +5,9 @@ import comfy_extras.nodes_model_merging
 import math
 import re
 
-
 # ──────────────────────────────────────────────────────────────
 # Slerp（球面線形補間）実装 - 数値的安定性を最優先
-# ────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
 def slerp_safe(v0, v1, t, DOT_THRESHOLD=0.9995, EPS=1e-7):
     """
     数値的に安定したSlerp実装
@@ -17,7 +16,7 @@ def slerp_safe(v0, v1, t, DOT_THRESHOLD=0.9995, EPS=1e-7):
         v0, v1: torch.Tensor (同じ形状であること)
         t: float (0.0〜1.0)
         DOT_THRESHOLD: dot productがこの値以上ならLinearにフォールバック
-        EPS: ロ除算防止用の微小値
+        EPS: ゼロ除算防止用の微小値
     
     Returns:
         torch.Tensor: Slerp補間結果
@@ -65,9 +64,9 @@ def slerp_safe(v0, v1, t, DOT_THRESHOLD=0.9995, EPS=1e-7):
             coef1 = torch.sin(t * theta) / sin_theta
             result_flat = coef0 * v0_norm + coef1 * v1_norm
         
-        # 元のノームを復元（平均ノームを使用）
-        avg_norm = (norm0 + norm1) / 2.0
-        result_flat = result_flat * avg_norm
+        # 【修正】元のノームをtの比率に応じて線形補間
+        interpolated_norm = norm0 * (1.0 - t) + norm1 * t
+        result_flat = result_flat * interpolated_norm
     
     # 元の形状に復元
     result = result_flat.reshape_as(v0)
@@ -142,7 +141,8 @@ class ModelMergeCosmosPredict2_2B_Slerp(comfy_extras.nodes_model_merging.ModelMe
             
             # blocks.N.のパターンを検出
             if not matched:
-                match = re.match(r'blocks\.(\d+)\.', key)
+                # 【修正】re.match -> re.search に変更し、キー内のどこかに含まれていれば検出
+                match = re.search(r'blocks\.(\d+)\.', key)
                 if match:
                     block_num = int(match.group(1))
                     block_key = "blocks.{}.".format(block_num)
@@ -160,7 +160,8 @@ class ModelMergeCosmosPredict2_2B_Slerp(comfy_extras.nodes_model_merging.ModelMe
                         # 形状が異なる場合はLinearフォールバック
                         merged_sd[key] = sd1[key] * (1.0 - ratio) + sd2[key] * ratio
                 except Exception as e:
-                    print(f"Warning: Slerp failed for {key}, falling back to linear. Error: {str(e)}")
+                    # 【修正】エラーメッセージの改善
+                    print(f"[Cosmos Slerp] Warning: Slerp failed for {key}, falling back to linear. Error: {str(e)}")
                     # フォールバック：Linear補間
                     merged_sd[key] = sd1[key] * (1.0 - ratio) + sd2[key] * ratio
             else:
@@ -188,16 +189,16 @@ class ModelMergeCosmosPredict2_2B_Slerp(comfy_extras.nodes_model_merging.ModelMe
             )
             
             if missing_keys and len(missing_keys) > 0:
-                print(f"Warning: {len(missing_keys)} keys not loaded (missing in merged state_dict)")
+                print(f"[Cosmos Slerp] Warning: {len(missing_keys)} keys not loaded (missing in merged state_dict)")
             if unexpected_keys and len(unexpected_keys) > 0:
-                print(f"Warning: {len(unexpected_keys)} unexpected keys in merged state_dict")
+                print(f"[Cosmos Slerp] Warning: {len(unexpected_keys)} unexpected keys in merged state_dict")
                 
         except Exception as e:
-            print(f"Error loading state dict: {str(e)}")
+            print(f"[Cosmos Slerp] Error loading state dict: {str(e)}")
             raise
         
-        # VRAM管理：不要なモデルをアンロード
-        comfy.model_management.cleanup_models(keep_clone_weights_loaded=True)
+        # 【修正】VRAM管理：不要なモデルをアンロード（keep_clone_weights_loaded=Trueを削除）
+        comfy.model_management.cleanup_models()
         
         return (new_model,)
 
